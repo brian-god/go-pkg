@@ -29,7 +29,7 @@ type Option struct {
 // ResponseResult 响应结果
 type ResponseResult struct {
 	Data  interface{}
-	Error *herrors.ServerError
+	Error *herrors.HError
 }
 
 func DefaultResponseResult() *ResponseResult {
@@ -40,7 +40,7 @@ func (r *ResponseResult) WithData(data interface{}) *ResponseResult {
 	return r
 }
 
-func (r *ResponseResult) WithError(err *herrors.ServerError) *ResponseResult {
+func (r *ResponseResult) WithError(err *herrors.HError) *ResponseResult {
 	r.Error = err
 	return r
 }

@@ -1,7 +1,9 @@
 package hserver
 
 import (
+	"context"
 	"github.com/brian-god/go-pkg/constant"
+	"github.com/brian-god/go-pkg/hserver/herrors"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/utils"
 	hertzI18n "github.com/hertz-contrib/i18n"
@@ -19,7 +21,7 @@ func ResponseSuccess(c *app.RequestContext, data interface{}) {
 	if data == nil {
 		data = utils.H{}
 	}
-	message := hertzI18n.MustGetMessage(constant.ReasonSuccess)
+	message := hertzI18n.MustGetMessage(context.Background(), constant.ReasonSuccess)
 	if message == "" {
 		message = "ok"
 	}
@@ -35,7 +37,7 @@ func ResponseFailure(c *app.RequestContext, code int, reason, msg string, data i
 		data = utils.H{}
 	}
 	if reason != "" {
-		i18Mag := hertzI18n.MustGetMessage(reason)
+		i18Mag := hertzI18n.MustGetMessage(context.Background(), reason)
 		if i18Mag != "" {
 			msg = i18Mag
 		}
@@ -47,14 +49,14 @@ func ResponseFailure(c *app.RequestContext, code int, reason, msg string, data i
 ResponseFailureErr 返回失败响应数据
 调用示例:
 */
-func ResponseFailureErr(c *app.RequestContext, err *herrors.ServerError) {
+func ResponseFailureErr(c *app.RequestContext, err *herrors.HError) {
 	code := err.Code
 	if code == 0 {
 		code = http.StatusInternalServerError
 	}
 	msg := err.DefMessage
 	if err.Reason != "" {
-		i18Mag := hertzI18n.MustGetMessage(err.Reason)
+		i18Mag := hertzI18n.MustGetMessage(context.Background(), err.Reason)
 		if i18Mag != "" {
 			msg = i18Mag
 		}
