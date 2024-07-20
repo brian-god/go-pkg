@@ -15,6 +15,11 @@ var (
 	ErrCannotParseSubject = errors.New("cannot parse subject")
 )
 
+type IToken interface {
+	Generate(data interface{}, expire time.Duration) (string, error)
+	Verify(token string, data interface{}) error
+}
+
 // AccessToken //token
 type AccessToken struct {
 	UserId       string `json:"userId"`                   // 刷新 token
@@ -32,17 +37,18 @@ func (a *AccessToken) MarshalBinary() (data []byte, err error) {
 	return json.Marshal(a)
 }
 
-type Token struct {
+// DefToken 默认的token实现
+type DefToken struct {
 	issuer     string
 	signingKey string
 }
 
-func New(issuer, signingKey string) *Token {
-	return &Token{issuer: issuer, signingKey: signingKey}
+func NewDef(issuer, signingKey string) *DefToken {
+	return &DefToken{issuer: issuer, signingKey: signingKey}
 }
 
 // Generate 生成令牌
-func (to *Token) Generate(data interface{}, expire time.Duration) (string, error) {
+func (to *DefToken) Generate(data interface{}, expire time.Duration) (string, error) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		return "", err
@@ -71,7 +77,7 @@ func (to *Token) Generate(data interface{}, expire time.Duration) (string, error
 }
 
 // Verify 验证令牌
-func (to *Token) Verify(token string, data interface{}) error {
+func (to *DefToken) Verify(token string, data interface{}) error {
 	t, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{}, func(*jwt.Token) (interface{}, error) {
 		return []byte(to.signingKey), nil
 	})
@@ -81,16 +87,10 @@ func (to *Token) Verify(token string, data interface{}) error {
 		var ve *jwt.ValidationError
 		if errors.As(err, &ve) {
 			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
-				//log.Println("that's not even a token:", err)
 				return ErrMalformed
 			} else if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
-				//log.Println("token is either expired or not active yet:", err)
-				//if data != nil {
-				//	_ = this.parse(t, data)
-				//}
 				return ErrExpiredOrNotActive
 			} else {
-				//log.Println("couldn't handle this token:", err)
 				return ErrUnknown
 			}
 		}
@@ -106,7 +106,7 @@ func (to *Token) Verify(token string, data interface{}) error {
 	return nil
 }
 
-func (to *Token) parse(t *jwt.Token, data interface{}) error {
+func (to *DefToken) parse(t *jwt.Token, data interface{}) error {
 	clm, ok := t.Claims.(*jwt.RegisteredClaims)
 	if !ok {
 		return ErrNotStandardClaims

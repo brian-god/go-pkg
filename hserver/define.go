@@ -15,15 +15,7 @@ import (
 )
 
 type Router interface {
-	ConfigRoutes(r *server.Hertz, t *token.Token) // 配置路由
-}
-
-type Option struct {
-	RateQPS         int
-	CryptoKey       string
-	TokenIssuer     string
-	TokenSigningKey string
-	ReleaseMode     bool
+	ConfigRoutes(r *server.Hertz, t token.IToken) // 配置路由
 }
 
 // ResponseResult 响应结果

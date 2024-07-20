@@ -1,30 +1,39 @@
 package redis
 
 import (
+	"context"
+	"errors"
 	"github.com/go-redsync/redsync/v4"
 	"github.com/go-redsync/redsync/v4/redis/goredis/v9"
 	"github.com/redis/go-redis/v9"
 )
 
-func ConfigDatabase(opt Option) (err error) {
-	option = &opt
-	DB = redis.NewClient(&redis.Options{
-		Addr:     option.Addr,
-		Password: option.Password,
-		DB:       option.DB,
+type RedisClient struct {
+	client *redis.Client
+	rs     *redsync.Redsync
+}
+
+func NewRedisClient(opt Option) (*RedisClient, error) {
+	db := redis.NewClient(&redis.Options{
+		Addr:     opt.Addr,
+		Password: opt.Password,
+		DB:       opt.DB,
 	})
-	_ = DB
-
-	pool := goredis.NewPool(DB)
-	RS = redsync.New(pool)
-	_ = RS
-
-	return nil
+	err := db.Ping(context.Background()).Err()
+	if err != nil {
+		return nil, err
+	}
+	pool := goredis.NewPool(db)
+	rs := redsync.New(pool)
+	return &RedisClient{
+		client: db,
+		rs:     rs,
+	}, nil
 }
 
 // MutexWithUnlock 分布式锁，并发控制
-func MutexWithUnlock(name string, options ...redsync.Option) (UnlockFunc, error) {
-	mutex := RS.NewMutex(name, options...)
+func (rc *RedisClient) MutexWithUnlock(name string, options ...redsync.Option) (UnlockFunc, error) {
+	mutex := rc.rs.NewMutex(name, options...)
 	if err := mutex.Lock(); err != nil {
 		return nil, err
 	}
@@ -41,8 +50,8 @@ func MutexWithUnlock(name string, options ...redsync.Option) (UnlockFunc, error)
 }
 
 // SimpleMutexWithUnlock 分布式锁，并发控制
-func SimpleMutexWithUnlock(name string) (UnlockFunc, error) {
-	mutex := RS.NewMutex(name)
+func (rc *RedisClient) SimpleMutexWithUnlock(name string) (UnlockFunc, error) {
+	mutex := rc.rs.NewMutex(name)
 	if err := mutex.Lock(); err != nil {
 		return nil, err
 	}
@@ -60,5 +69,5 @@ func SimpleMutexWithUnlock(name string) (UnlockFunc, error) {
 
 // IfErrorNotNil 是否为非空错误
 func IfErrorNotNil(err error) bool {
-	return err != nil && err != redis.Nil
+	return err != nil && !errors.Is(err, redis.Nil)
 }

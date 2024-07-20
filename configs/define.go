@@ -16,7 +16,6 @@ const (
 type Bootstrap struct {
 	Server *Server `mapstructure:"server"`
 	Log    *Log    `mapstructure:"log"`
-	Crypto *Crypto `mapstructure:"crypto"`
 	JWT    *JWT    `mapstructure:"jwt"`
 }
 type Server struct {
@@ -34,9 +33,6 @@ type Log struct {
 	MaxBackups int64  `mapstructure:"max_backups"`
 	MaxAge     int64  `mapstructure:"max_age"`
 	Compress   bool   `mapstructure:"compress"`
-}
-type Crypto struct {
-	AppKey string `mapstructure:"app_key"`
 }
 
 type JWT struct {

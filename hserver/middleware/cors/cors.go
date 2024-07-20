@@ -9,9 +9,7 @@ import (
 func Handler() app.HandlerFunc {
 	return cors.New(cors.Config{
 		// 允许跨源访问的 origin 列表
-		//AllowOrigins: []string{"http://localhost:*", "http://8.137.13.1:*"},
 		AllowOrigins: []string{"http://*", "https://*"},
-		//AllowOrigins: []string{"*"},
 		// 允许客户端跨源访问所使用的 HTTP 方法列表
 		AllowMethods: []string{"POST", "GET", "PUT", "DELETE", "OPTIONS"},
 		// 允许使用的头信息字段列表

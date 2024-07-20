@@ -4,15 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/brian-god/go-pkg/configs"
-	"github.com/brian-god/go-pkg/hserver/i18n"
 	"github.com/brian-god/go-pkg/hserver/log"
-	"github.com/brian-god/go-pkg/hserver/middleware/cors"
-	"github.com/brian-god/go-pkg/hserver/middleware/ratelimit"
 	"github.com/brian-god/go-pkg/token"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
-	"github.com/hertz-contrib/gzip"
 	prometheus "github.com/hertz-contrib/monitor-prometheus"
 	"os"
 	"os/signal"
@@ -27,23 +23,17 @@ var (
 )
 
 type Service struct {
-	option    *Option
+	Env       string
 	routers   []Router
 	handlers  []app.HandlerFunc
-	Tokenizer *token.Token
+	Tokenizer token.IToken
 	config    *configs.Bootstrap
 	hertz     *server.Hertz
 }
 
-func NewService(config *configs.Bootstrap) *Service {
+// NewService 创建服务
+func NewService(config *configs.Bootstrap, opts ...Option) *Service {
 	once.Do(func() {
-		opt := Option{
-			RateQPS:         config.Server.RateQPS,
-			CryptoKey:       config.Crypto.AppKey,
-			TokenIssuer:     config.JWT.Issuer,
-			TokenSigningKey: config.JWT.SigningKey,
-			ReleaseMode:     configs.Mode != configs.Development,
-		}
 		port := config.Server.Port
 		if port <= 0 {
 			port = 8888
@@ -57,10 +47,11 @@ func NewService(config *configs.Bootstrap) *Service {
 		addr := fmt.Sprintf(":%d", port)
 		h := server.Default(server.WithHostPorts(addr), server.WithTracer(prometheus.NewServerTracer(fmt.Sprintf(":%d", tracePort), "/hertz")))
 		service = &Service{
-			option:    &opt,
-			hertz:     h,
-			Tokenizer: token.New(opt.TokenIssuer, opt.TokenSigningKey),
-			config:    config,
+			hertz:  h,
+			config: config,
+		}
+		for _, opt := range opts {
+			opt(service)
 		}
 	})
 	return service
@@ -81,13 +72,6 @@ func (s *Service) GetHertz() *server.Hertz {
 
 // Run 运行服务
 func (s *Service) Run() {
-	// Set up cross domain and flow limiting middleware
-	s.hertz.Use(cors.Handler())
-	s.hertz.Use(ratelimit.WithTimeoutHandler(s.option.RateQPS))
-	//Use compression
-	s.hertz.Use(gzip.Gzip(gzip.DefaultCompression))
-	//internationalization
-	s.hertz.Use(i18n.Handler())
 	//Register custom processors
 	if len(s.handlers) > 0 {
 		s.hertz.Use(s.handlers...)
